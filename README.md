@@ -1,127 +1,116 @@
-# 🫀 Explainable Deep Learning Framework for Heart Disease Diagnosis
+# Heart Disease Image Classification — Streamlit Deployment
 
-Image-based heart disease classification with **EfficientNetB0 transfer learning** and
-**Grad-CAM** explanations, served as a **Streamlit** web app.
+This repository template is based on the supplied training code. The training script uses **TensorFlow/Keras EfficientNetB0** for **binary image classification**, input size **224 × 224**, two training stages (frozen backbone, then fine-tuning), evaluation plots, and Grad-CAM visualizations.
 
-> ⚠️ **Disclaimer:** research/educational prototype. Not a medical device. Not validated for
-> clinical use. Do not use it to make health decisions.
-
-**Live demo:** `https://<your-app-name>.streamlit.app` *(add after deploying)*
-
----
-
-## What it does
-
-1. Trains a binary image classifier (frozen backbone, then fine-tuning) on the heart disease image dataset.
-2. Evaluates on a held-out, stratified test set (accuracy, precision, recall, F1, ROC-AUC, confusion matrix).
-3. Explains each prediction with a Grad-CAM heatmap showing which image regions drove the decision.
-4. Serves the model in a web app: upload an image, get a prediction, confidence and heatmap.
-
-## Results
-
-Fill these in from `model/metrics.json` after training (do not guess):
-
-| Metric | Test set |
-|---|---|
-| Accuracy | _ |
-| Precision | _ |
-| Recall | _ |
-| F1 | _ |
-| ROC-AUC | _ |
-
-Figures (confusion matrix, ROC, Grad-CAM grid) are in `assets/`.
+> **Research/education only:** This app is not a medical device and must not be used for diagnosis or treatment.
 
 ## Repository structure
 
-```
-.
-├── app.py                      # Streamlit app (prediction + Grad-CAM)
+```text
+heart-disease-streamlit/
+├── app.py
 ├── requirements.txt
-├── model/
-│   ├── final_model.keras       # trained model (from Colab)
-│   ├── class_names.json
-│   └── metrics.json
-├── assets/                     # confusion_matrix.png, roc_curve.png, gradcam_grid.png
-├── notebooks/
-│   └── heart_disease_dl_colab.ipynb   # full training pipeline
-└── .streamlit/config.toml
+├── runtime.txt
+├── README.md
+├── .gitignore
+└── models/
+    ├── final_model.keras       # add after training
+    └── class_names.json        # add after training
 ```
 
-The raw dataset (~3 GB) is **not** stored in the repo.
+## 1. Prepare the trained model
 
-## 1. Train the model (Google Colab)
+The supplied script saves these files in Colab under `/content/outputs/`:
 
-1. Upload `notebooks/heart_disease_dl_colab.ipynb` to Colab and set the runtime to **GPU**.
-2. Put the dataset zip in Drive and set `ZIP_PATH` in the notebook.
-3. Run all cells. **Read the folder tree printed in section 4** and confirm the classes and splits look right.
-4. The last cell copies these files to `MyDrive/heart_disease_xai_export/`:
-   `final_model.keras`, `class_names.json`, `metrics.json`, and the three PNG figures.
-   It also prints the TensorFlow version to pin.
+- `final_model.keras`
+- `class_names.json`
 
-## 2. Add the files to this repo
+After training, download those two files from Colab. Create a `models` folder in this repository and put both files there:
 
-- `final_model.keras`, `class_names.json`, `metrics.json` → `model/`
-- `confusion_matrix.png`, `roc_curve.png`, `gradcam_grid.png` → `assets/`
-- In `requirements.txt`, change `tensorflow-cpu>=2.16` to the exact version printed by the notebook (e.g. `tensorflow-cpu==2.xx.x`).
+```text
+models/final_model.keras
+models/class_names.json
+```
 
-File size: GitHub warns above 50 MB and rejects files above 100 MB. If `final_model.keras` is larger, enable
-Git LFS (`git lfs install`, then uncomment the line in `.gitattributes`).
+`class_names.json` is produced by the training code and preserves the folder-label order. Do not type class names from memory; use the generated file.
 
-## 3. Run locally (optional)
+**Important:** The supplied file is Python source code despite its `.ipynb` filename. It starts with `from google.colab import drive` and uses Colab paths. It is not a standard notebook JSON file. For local use, save it as a `.py` script and adapt the data paths; for Colab, paste the code into notebook cells or upload it as a Python file.
+
+## 2. Test locally
+
+Use Python 3.11 for a compatible deployment environment. In a terminal from this project folder:
 
 ```bash
 python -m venv .venv
-source .venv/bin/activate        # Windows: .venv\Scripts\activate
+```
+
+Windows PowerShell:
+```powershell
+.\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
 pip install -r requirements.txt
 streamlit run app.py
 ```
 
-## 4. Push to GitHub
+If PowerShell blocks activation, run the commands in Command Prompt instead:
+```bat
+.venv\Scripts\activate.bat
+pip install -r requirements.txt
+streamlit run app.py
+```
+
+The app expects a binary model with a single sigmoid output and 224 × 224 RGB input, matching the supplied training code.
+
+## 3. Upload to GitHub
+
+1. Create a new GitHub repository, for example `heart-disease-streamlit`.
+2. Upload `app.py`, `requirements.txt`, `runtime.txt`, `README.md`, `.gitignore`, and the `models` folder.
+3. Add `models/final_model.keras` and `models/class_names.json` only after you have downloaded them from training.
+4. Do not upload the original multi-GB dataset or zip archives to GitHub. Keep datasets local/Drive-hosted and add them to `.gitignore`.
+5. GitHub blocks ordinary files larger than 100 MB. If the `.keras` model is over that limit, use Git LFS or host the model on Hugging Face Hub / another stable file host and modify the app to download it. Check the host's size and bandwidth limits before deploying.
+6. Never commit API tokens, passwords, or private data.
+
+### Git commands (optional)
 
 ```bash
 git init
-git add .
-git commit -m "Heart disease XAI: model + Streamlit app"
+git add app.py requirements.txt runtime.txt README.md .gitignore models/
+git commit -m "Add Streamlit heart image classifier"
 git branch -M main
-git remote add origin https://github.com/<your-username>/<repo-name>.git
+git remote add origin https://github.com/YOUR-USERNAME/heart-disease-streamlit.git
 git push -u origin main
 ```
 
-(Create the empty repo on github.com first.) Keep the repo public to use the free Community Cloud tier freely.
+Replace `YOUR-USERNAME` with your GitHub username and use the repository URL GitHub gives you.
 
-## 5. Deploy on Streamlit Community Cloud
+## 4. Deploy on Streamlit Community Cloud
 
-1. Go to [share.streamlit.io](https://share.streamlit.io) and sign in with GitHub (authorize access to your repo).
-2. Click **Create app** (or **New app**) and pick this repository, branch `main`, main file path `app.py`.
-3. Click **Advanced settings** and choose **Python 3.12** (3.11 also works with TensorFlow).
-   `runtime.txt` is not supported on Community Cloud; the version is set only in this dialog or the app settings.
-4. Click **Deploy**. The first build installs TensorFlow and takes a few minutes.
-5. Every `git push` to `main` redeploys the app automatically.
+1. Push the repository to GitHub.
+2. Open https://share.streamlit.io/ and sign in with GitHub.
+3. Choose **Create app**.
+4. Select your repository, branch (`main`), and main file path (`app.py`).
+5. Deploy and wait for dependencies to install.
+6. Open the app URL and test with a permitted sample image.
 
-## Troubleshooting
+If deployment fails:
+- Check **Manage app → Logs** for the first error.
+- Confirm the model and class-name files are present at the expected paths.
+- Ensure the TensorFlow version is compatible with the version used to save the model. If needed, print `tf.__version__` in the training environment and pin a matching version in `requirements.txt`.
+- TensorFlow can require substantial memory; large models or limited hosting resources may cause startup failure.
+- Do not commit the full dataset just to make the app run. The deployed app only needs the trained model and class labels.
 
-| Problem | Likely cause / fix |
-|---|---|
-| App shows "This app has gone over its resource limits" | TensorFlow + the model is memory-hungry. Reboot the app, keep `tensorflow-cpu`, and upload one image at a time. Community Cloud gives roughly 0.7 GB guaranteed, up to ~2.7 GB when available. If it keeps crashing, host elsewhere (e.g. Hugging Face Spaces) or convert the model to a lighter runtime. |
-| `ValueError` / error loading `final_model.keras` | TensorFlow/Keras version differs from the one used in Colab. Pin the exact version from the notebook's last cell. |
-| Build fails installing TensorFlow | Wrong Python version. Select 3.12 (or 3.11) in Advanced settings. |
-| "Model files not found" | `model/final_model.keras` or `model/class_names.json` was not committed. |
-| `git push` rejected for file size | Model above 100 MB; use Git LFS. |
+## 5. What the app does
 
-## How Grad-CAM is computed
+- Accepts JPG, JPEG, PNG, BMP, and WEBP uploads.
+- Resizes the image to 224 × 224 RGB.
+- Loads the saved Keras model and class names.
+- Displays the predicted class and sigmoid score.
+- Shows a medical-use disclaimer.
 
-The backbone is a nested model, so the app builds a feature model (backbone input → last conv maps and
-backbone output), applies the classification head manually inside a `GradientTape`, and weights the conv
-maps by the pooled gradients of the **predicted class** score. Warm regions influenced the prediction most.
-A heatmap shows what the model relied on; it is not proof that the model is clinically right.
+## Important validation note
 
-## Limitations
+The training script detects a folder split if the data root has `train/` and `test/`; if no validation folder exists, it takes part of the training dataset for validation. If the data is not pre-split, it splits the root directory into a training partition and a validation/test partition. For a final scientific report, confirm that patient-level separation is valid and that the test set is not used for model selection.
 
-- Binary classifier trained on a single dataset; performance on other scanners, hospitals or populations is unknown.
-- If the dataset has several images per patient, a random image-level split can inflate test scores; split by patient.
-- No calibration, uncertainty estimation or external validation yet.
-- Predictions are not clinical advice.
+## Important: Streamlit Cloud Python version
 
-## License
-
-Add a license (e.g. MIT) and cite the dataset source/licence here.
+TensorFlow 2.19.1 supports Python 3.9–3.12, not Python 3.14. In Streamlit Community Cloud, open the app's **Manage app / Settings** and set the Python version to **3.12** (or 3.11) if that setting is available, then reboot/redeploy. The `runtime.txt` and `.python-version` files are included as additional version hints, but verify the Python version shown in the deployment logs. The logs must not say Python 3.14 when using TensorFlow 2.19.1.
