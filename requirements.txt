@@ -1,7 +1,8 @@
-# Streamlit Cloud: choose Python 3.12 under "Advanced settings" when deploying.
-# Use the TensorFlow version you trained with in Colab (print(tf.__version__)); 2.21.0 shown here.
-tensorflow-cpu==2.21.0
-numpy<2.6
+# Works on any Python version Streamlit Cloud selects.
+# Python 3.12 / 3.13 (recommended): stable TensorFlow 2.21.0
+tensorflow-cpu==2.21.0 ; python_version < "3.14"
+# Python 3.14: no stable TensorFlow exists yet; 2.22.0rc0 is the only build available
+tensorflow==2.22.0rc0 ; python_version >= "3.14"
 pillow>=10
 matplotlib>=3.8
 streamlit>=1.40
