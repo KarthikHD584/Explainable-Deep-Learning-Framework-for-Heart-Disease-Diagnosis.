@@ -1,0 +1,10 @@
+# Serving dependencies. For production, ALSO install models/requirements.lock.txt (written by
+# export_for_deployment.py) so TensorFlow/Keras match the versions the models were trained with.
+tensorflow>=2.16,<3
+numpy>=1.26
+pillow>=10
+matplotlib>=3.8
+fastapi>=0.110
+uvicorn[standard]>=0.29
+python-multipart>=0.0.9
+gradio>=4.30

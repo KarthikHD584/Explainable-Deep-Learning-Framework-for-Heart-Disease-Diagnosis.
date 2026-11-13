@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+predictions/
+.ipynb_checkpoints/
+# Patient images must never be committed
+data/
+*.jpg
+*.jpeg
+!docs/*.jpg
