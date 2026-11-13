@@ -1,10 +1,7 @@
-# Serving dependencies. For production, ALSO install models/requirements.lock.txt (written by
-# export_for_deployment.py) so TensorFlow/Keras match the versions the models were trained with.
-tensorflow>=2.16,<3
-numpy>=1.26
+# Streamlit Cloud: choose Python 3.12 under "Advanced settings" when deploying.
+# Use the TensorFlow version you trained with in Colab (print(tf.__version__)); 2.21.0 shown here.
+tensorflow-cpu==2.21.0
+numpy<2.6
 pillow>=10
 matplotlib>=3.8
-fastapi>=0.110
-uvicorn[standard]>=0.29
-python-multipart>=0.0.9
-gradio>=4.30
+streamlit>=1.40
