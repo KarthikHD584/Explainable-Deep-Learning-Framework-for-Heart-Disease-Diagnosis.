@@ -14,6 +14,9 @@ import glob
 import io
 import json
 import os
+import re
+import shutil
+import urllib.request
 
 import numpy as np
 import streamlit as st
@@ -22,6 +25,49 @@ from PIL import Image
 st.set_page_config(page_title="Heart Disease XAI", page_icon="🫀", layout="wide")
 
 MODEL_DIR = os.getenv("MODEL_DIR", "models")
+DOWNLOAD_DIR = os.path.join(os.path.expanduser("~"), ".heart_xai_models")   # writable on Streamlit Cloud
+
+
+def setting(name: str, default: str = "") -> str:
+    """Read a setting from the environment or from Streamlit secrets (Settings -> Secrets on Streamlit Cloud)."""
+    if os.getenv(name):
+        return os.getenv(name)
+    try:
+        return str(st.secrets.get(name, default))
+    except Exception:  # no secrets file
+        return default
+
+
+# Direct download link of final_model.keras, e.g. a GitHub Release asset:
+#   https://github.com/<user>/<repo>/releases/download/v1.0/final_model.keras
+# Set it here, or (better) as MODEL_URL in the app's Secrets. Google Drive share links also work.
+MODEL_URL = setting("MODEL_URL", "")
+
+
+def direct_link(url: str) -> str:
+    m = re.search(r"drive\.google\.com/(?:file/d/|open\?id=|uc\?.*id=)([\w-]+)", url)
+    if m:
+        return f"https://drive.google.com/uc?export=download&confirm=t&id={m.group(1)}"
+    return url.replace("/blob/", "/raw/") if "github.com" in url and "/blob/" in url else url
+
+
+def download_model(url: str, dest_dir: str) -> str:
+    """Download the model once; later starts reuse the file."""
+    os.makedirs(dest_dir, exist_ok=True)
+    dest = os.path.join(dest_dir, "final_model.keras")
+    if os.path.exists(dest) and os.path.getsize(dest) > 1_000_000:
+        return dest_dir
+    tmp = dest + ".part"
+    req = urllib.request.Request(direct_link(url), headers={"User-Agent": "heart-xai-app"})
+    with urllib.request.urlopen(req, timeout=300) as r, open(tmp, "wb") as f:
+        shutil.copyfileobj(r, f, length=1 << 20)
+    with open(tmp, "rb") as f:
+        if f.read(2) != b"PK":   # a .keras file is a zip archive
+            os.remove(tmp)
+            raise ValueError("The MODEL_URL did not return a .keras file (got a web page instead). Use a direct "
+                             "download link, e.g. the GitHub Release asset link, and make sure it is public.")
+    os.replace(tmp, dest)
+    return dest_dir
 DISCLAIMER = ("Research prototype. Not a medical device and not for clinical use. Trained on 30 patients from one "
               "hospital and one scanner (CAD Cardiac MRI Dataset); results on other data are unknown.")
 
@@ -38,9 +84,11 @@ def read_config(model_dir: str) -> dict:
     return cfg
 
 
-@st.cache_resource(show_spinner="Loading the model (first visit only)…")
-def load_models(model_dir: str):
+@st.cache_resource(show_spinner="Loading the model (first visit only, may take a minute)…")
+def load_models(model_dir: str, model_url: str = ""):
     import tensorflow as tf
+    if not glob.glob(os.path.join(model_dir, "*.keras")) and model_url:
+        model_dir = download_model(model_url, DOWNLOAD_DIR)
     cfg = read_config(model_dir)
     if not cfg["models"]:
         return cfg, []
@@ -112,7 +160,7 @@ st.caption("EfficientNet-B0 classifier (Normal vs Sick / coronary artery disease
 st.warning(DISCLAIMER, icon="⚠️")
 
 try:
-    cfg, models = load_models(MODEL_DIR)
+    cfg, models = load_models(MODEL_DIR, MODEL_URL)
 except Exception as e:  # show a readable message instead of a redacted traceback
     st.error(f"The model could not be loaded from `{MODEL_DIR}/`: {type(e).__name__}: {e}")
     st.info("Check that the .keras file is in the models/ folder of the repository (not tracked with Git LFS) and "
@@ -120,8 +168,17 @@ except Exception as e:  # show a readable message instead of a redacted tracebac
     st.stop()
 
 if not models:
-    st.error(f"No model found. Put `final_model.keras` (or the exported bundle) into the `{MODEL_DIR}/` folder of "
-             "the repository and reboot the app.")
+    st.error("No model found.")
+    st.markdown(
+        "**Fix (one time):**\n"
+        "1. In Colab, download `/content/outputs/final_model.keras`.\n"
+        "2. On GitHub, open your repository → **Releases** → **Create a new release** → tag `v1.0` → drag "
+        "`final_model.keras` into the release files → **Publish release**.\n"
+        "3. Right-click `final_model.keras` in the published release → **Copy link address**.\n"
+        "4. On Streamlit Cloud: **Manage app → ⋮ → Settings → Secrets**, paste `MODEL_URL = \"<the link>\"`, "
+        "**Save**, then **Reboot app**.\n\n"
+        f"(Alternatively, commit the file to the `{MODEL_DIR}/` folder if it is smaller than GitHub's 25 MB "
+        "browser-upload limit.)")
     st.stop()
 
 threshold = float(cfg["threshold"])
